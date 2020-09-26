@@ -8,6 +8,7 @@ import sqlite3
 from threading import Thread
 import time
 import json
+import os.path
 
 global_stock_dict = {}
 
@@ -77,7 +78,11 @@ def read_stock_file(file_path):
     
     
 def write_db():
-  
+    db_file = 'stock_db.txt'
+
+    if os.path.exists(db_file):
+        with open(db_file, 'r+') as f:
+            f.truncate(0)  # need '0' when using r+
 
     for key in global_stock_dict:
 
@@ -86,7 +91,7 @@ def write_db():
         sales_array = global_stock_dict[key][2]
 
         # open output file for writing
-        with open('stock_db.txt', 'a') as filehandle:
+        with open(db_file, 'a') as filehandle:
             filehandle.write(key +' net_income ')
             json.dump(net_income_array, filehandle)
             filehandle.write(' eps ')
