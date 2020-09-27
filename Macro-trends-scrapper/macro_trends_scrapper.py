@@ -8,7 +8,6 @@ import sqlite3
 from threading import Thread
 import time
 import json
-import os.path
 
 global_stock_dict = {}
 
@@ -52,7 +51,7 @@ class macrotrends_generic:
         
     def fill_global_stock_dict(self):
         global global_stock_dict
-        global_stock_dict[self.__symbol] = ['','','']
+
         if (self.__operation == 'eps-earnings-per-share-diluted'):
             global_stock_dict[self.__symbol][0] = self.__macrotrends_list
         elif (self.__operation == 'net-income'):
@@ -78,11 +77,7 @@ def read_stock_file(file_path):
     
     
 def write_db():
-    db_file = 'stock_db.txt'
-
-    if os.path.exists(db_file):
-        with open(db_file, 'r+') as f:
-            f.truncate(0)  # need '0' when using r+
+  
 
     for key in global_stock_dict:
 
@@ -91,7 +86,7 @@ def write_db():
         sales_array = global_stock_dict[key][2]
 
         # open output file for writing
-        with open(db_file, 'a') as filehandle:
+        with open('stock_db.txt', 'r') as filehandle:
             filehandle.write(key +' net_income ')
             json.dump(net_income_array, filehandle)
             filehandle.write(' eps ')
@@ -106,14 +101,17 @@ def iteatre_over_stock_map(stock_map):
     i = 1
     for stock_symbol in stock_map:
         try:
+            global global_stock_dict
             print(stock_symbol)
+            global_stock_dict[stock_symbol] = ['','','']
             temp1 = Thread(target = macrotrends_generic(stock_symbol,stock_map[stock_symbol], 'net-income'))
             tmep2 = Thread(target = macrotrends_generic(stock_symbol,stock_map[stock_symbol],'eps-earnings-per-share-diluted')) 
             temp3 = Thread(target = macrotrends_generic(stock_symbol,stock_map[stock_symbol],'revenue'))
             time.sleep(0.02)
             if (i % 5 == 0):
-                time.sleep(0.5)
+                time.sleep(0.05)
             i = i + 1
+
         except:
             print ('didnt work for'+ stock_symbol)
             pass
