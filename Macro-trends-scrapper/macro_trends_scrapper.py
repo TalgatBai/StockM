@@ -23,7 +23,8 @@ class macrotrends_generic:
         self.__soup = self.__get_html_profile_data(self.__stock_path)
         self.__fill_nem_dict(self.__soup)
         #Public methods and members
-        self.get_list = self.get_list_func(self.__soup)
+        self.get_list = self.get_list_func()
+        self.fill_global_stock_dict()
 
     def __get_html_profile_data(self, stock_path):
         URL = 'https://www.macrotrends.net/stocks/charts/'+stock_path
@@ -45,15 +46,20 @@ class macrotrends_generic:
     
     
     
-    def get_list_func(self,soup):
-        global global_stock_dict
-        if (self.__symbol in global_stock_dict):
-            global_stock_dict[self.__symbol] = [ global_stock_dict[self.__symbol],[self.__operation ,self.__macrotrends_list]]
-        else:
-            global_stock_dict[self.__symbol] = [self.__operation ,self.__macrotrends_list]
-
+    def get_list_func(self):
         return self.__macrotrends_list
+        
+    def fill_global_stock_dict(self):
+        global global_stock_dict
+        global_stock_dict[self.__symbol] = ['','','']
+        if (self.__operation == 'eps-earnings-per-share-diluted'):
+            global_stock_dict[self.__symbol][0] = self.__macrotrends_list
+        elif (self.__operation == 'net-income'):
+            global_stock_dict[self.__symbol][1] = self.__macrotrends_list
+        else:
+            global_stock_dict[self.__symbol][2] = self.__macrotrends_list
 
+                
 
 def read_stock_file(file_path):
     stock_map = {}
@@ -75,21 +81,18 @@ def write_db():
 
     for key in global_stock_dict:
 
-        if (global_stock_dict[key][0][1][0].find('eps')!=-1):
-            eps = global_stock_dict[key][0][1][1]
-        if (global_stock_dict[key][0][0][0].find('net-income')!=-1):
-            net_income = global_stock_dict[key][0][0][1]
-        if (global_stock_dict[key][1][0].find('revenue')!=-1):
-            sales = global_stock_dict[key][1][1]
+        eps_array = global_stock_dict[key][0]
+        net_income_array = global_stock_dict[key][1]
+        sales_array = global_stock_dict[key][2]
 
         # open output file for writing
         with open('stock_db.txt', 'a') as filehandle:
             filehandle.write(key +' net_income ')
-            json.dump(net_income, filehandle)
+            json.dump(net_income_array, filehandle)
             filehandle.write(' eps ')
-            json.dump(eps, filehandle)
+            json.dump(eps_array, filehandle)
             filehandle.write(' sales ')
-            json.dump(sales, filehandle)
+            json.dump(sales_array, filehandle)
             filehandle.write('\n')
 
     
@@ -104,7 +107,7 @@ def iteatre_over_stock_map(stock_map):
             temp3 = Thread(target = macrotrends_generic(stock_symbol,stock_map[stock_symbol],'revenue'))
             time.sleep(0.02)
             if (i % 5 == 0):
-                time.sleep(1.5)
+                time.sleep(0.5)
             i = i + 1
         except:
             print ('didnt work for'+ stock_symbol)
