@@ -45,11 +45,13 @@ class StocksRater:
     income = 'net_income'
     eps = 'eps'
     sales = 'sales'
+    # growth_threshold = 50
 
-    def __init__(self, stocks_info_file, top_stocks_file):
-        self.__stocks_heap = []
+    def __init__(self, stocks_info_file, acceleration_stocks_file):
+        # self.__eps_growth_stocks_heap = []
+        self.__acceleration_stocks_heap = []
         self.__stocks_info_file = stocks_info_file
-        self.__top_stocks_file = top_stocks_file
+        self.__acceleration_stocks_file = acceleration_stocks_file
 
     def calc_top_stocks(self):
         if not os.path.exists(self.__stocks_info_file):
@@ -62,7 +64,7 @@ class StocksRater:
                 if not stock:
                     continue
 
-                heappush(self.__stocks_heap, stock)
+                heappush(self.__acceleration_stocks_heap, stock)
 
     @staticmethod
     def __get_stock_object(line):
@@ -142,32 +144,34 @@ class StocksRater:
         for quarter in range(StocksRater.quarters_to_follow * (-1), 0):
             curr_q = data_list[quarter]
             prev_q = data_list[quarter - StocksRater.quarters_to_look_back]
-            if curr_q <= 0 or prev_q <= 0 or prev_q >= curr_q:
+            if prev_q >= curr_q:
                 return None
-            q_acceleration = round(((curr_q / prev_q) - 1) * 100, 2)
+
+            q_acceleration = round(curr_q * 100, 2) if prev_q == 0 else abs(round((curr_q - prev_q) / prev_q * 100, 2))
             if acceleration and q_acceleration <= acceleration[-1]:
                 return None
+
             acceleration.append(q_acceleration)
         return acceleration
 
     def write_stocks_to_file(self):
-        if os.path.exists(self.__top_stocks_file):
-            with open(self.__top_stocks_file, 'r+') as f:
+        if os.path.exists(self.__acceleration_stocks_file):
+            with open(self.__acceleration_stocks_file, 'r+') as f:
                 f.truncate(0)  # need '0' when using r+
 
-        with open(self.__top_stocks_file, 'a') as top_stocks:
-            while self.__stocks_heap:
-                top_stocks.write(str(heappop(self.__stocks_heap)) + '\n')
+        with open(self.__acceleration_stocks_file, 'a') as top_stocks:
+            while self.__acceleration_stocks_heap:
+                top_stocks.write(str(heappop(self.__acceleration_stocks_heap)) + '\n')
 
 
-def rate_stocks(stocks_info_file, top_stocks_file):
-    rater = StocksRater(stocks_info_file, top_stocks_file)
+def rate_stocks(stocks_info_file, acceleration_stocks_file):
+    rater = StocksRater(stocks_info_file, acceleration_stocks_file)
     rater.calc_top_stocks()
     rater.write_stocks_to_file()
 
 
 def main():
-    rate_stocks("stock_db.txt", "top_stocks.txt")
+    rate_stocks("stock_db.txt", "acceleration_stocks.txt")
 
 
 if __name__ == "__main__":
