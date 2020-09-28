@@ -2,7 +2,7 @@ from heapq import heappush, heappop
 import os.path
 
 
-class Stock:
+class AcceleratedStock:
 
     def __init__(self, symbol, eps, eps_acceleration, income, income_acceleration, sales_list, sales_acceleration):
         self.symbol = symbol
@@ -38,74 +38,85 @@ class Stock:
         return not self.__eq__(other)
 
 
+class GrowthStock:
+
+    def __init__(self, symbol, eps, eps_growth):
+        self.symbol = symbol
+        self.eps = eps
+        self.eps_growth = eps_growth
+
+    def __str__(self):
+        """
+        return str.format("{}, eps_growth: {}, eps: {}", self.symbol, self.eps_growth, self.eps)
+        """
+        return str.format("{}, eps_growth: {}", self.symbol, self.eps_growth)
+
+    def __lt__(self, other):
+        return other.eps_growth[-1] < self.eps_growth[-1]
+
+    def __gt__(self, other):
+        return other.__lt__(self)
+
+    def __eq__(self, other):
+        return self.eps_growth[-1] == other.eps_growth[-1]
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class StocksRater:
     total_quarters = 12
-    quarters_to_follow = 2
+    quarters_to_follow_growth = 3
+    quarters_to_follow_acceleration = 2
     quarters_to_look_back = 1
     income = 'net_income'
     eps = 'eps'
     sales = 'sales'
-    # growth_threshold = 50
+    growth_threshold = 50
 
-    def __init__(self, stocks_info_file, acceleration_stocks_file):
-        # self.__eps_growth_stocks_heap = []
-        self.__acceleration_stocks_heap = []
-        self.__stocks_info_file = stocks_info_file
-        self.__acceleration_stocks_file = acceleration_stocks_file
+    def __init__(self, stocks_info_file, acceleration_stocks_file, growth_stocks_file):
+        self.growth_stocks_heap = []
+        self.acceleration_stocks_heap = []
+        self.stocks_info_file = stocks_info_file
+        self.acceleration_stocks_file = acceleration_stocks_file
+        self.growth_stocks_file = growth_stocks_file
 
     def calc_top_stocks(self):
-        if not os.path.exists(self.__stocks_info_file):
-            print("{} does not exist".format(self.__stocks_info_file))
+        if not os.path.exists(self.stocks_info_file):
+            print("{} does not exist".format(self.stocks_info_file))
             return
 
-        with open(self.__stocks_info_file, 'r') as top_stocks:
+        with open(self.stocks_info_file, 'r') as top_stocks:
             for line in top_stocks:
-                stock = StocksRater.__get_stock_object(line)
-                if not stock:
+                if not line:
                     continue
 
-                heappush(self.__acceleration_stocks_heap, stock)
+                stock_symbol = line.split()[0]
+                eps_list = StocksRater.get_data_list_for_acceleration(line, StocksRater.eps, 1, StocksRater.sales, 0)
+                income_list = StocksRater.get_data_list_for_acceleration(line, StocksRater.income, 1, StocksRater.eps, 0)
+                sales_list = StocksRater.get_data_list_for_acceleration(line, StocksRater.eps, 1, StocksRater.sales, 1)
+
+                accelerated_stock = StocksRater.get_accelerated_stock(stock_symbol, eps_list, income_list, sales_list)
+                if accelerated_stock:
+                    heappush(self.acceleration_stocks_heap, accelerated_stock)
+
+                eps_list = StocksRater.get_data_list_for_growth(line, StocksRater.eps, 1, StocksRater.sales, 0)
+                growth_stock = StocksRater.get_growth_stock(stock_symbol, eps_list)
+                if growth_stock:
+                    heappush(self.growth_stocks_heap, growth_stock)
 
     @staticmethod
-    def __get_stock_object(line):
-        if not line:
-            return None
-        stock_symbol = line.split()[0]
-
-        eps_list, eps_acceleration = StocksRater.__calc_eps_and_eps_acceleration(line)
-        if not eps_list or not eps_acceleration:
-            return None
-
-        income_list, income_acceleration = StocksRater.__calc_income_and_income_acceleration(line)
-        if not income_list or not income_acceleration:
-            return None
-
-        sales_list, sales_acceleration = StocksRater.__calc_sales_and_sales_acceleration(line)
-        if not sales_list or not sales_acceleration:
-            return None
-
-        return Stock(stock_symbol, eps_list, eps_acceleration, income_list, income_acceleration, sales_list, sales_acceleration)
+    def get_data_list_for_acceleration(line, first_delimiter, after_first_delimiter, second_delimiter, after_second_delimiter):
+        return StocksRater.get_data_list(line, first_delimiter, after_first_delimiter, second_delimiter,
+                                         after_second_delimiter, StocksRater.quarters_to_follow_acceleration)
 
     @staticmethod
-    def __calc_eps_and_eps_acceleration(line):
-        eps_list = StocksRater.__get_data_list(line, StocksRater.eps, 1, StocksRater.sales, 0)
-        eps_acceleration = StocksRater.__calc_acceleration(eps_list)
-        return eps_list, eps_acceleration
+    def get_data_list_for_growth(line, first_delimiter, after_first_delimiter, second_delimiter, after_second_delimiter):
+        return StocksRater.get_data_list(line, first_delimiter, after_first_delimiter, second_delimiter,
+                                         after_second_delimiter, StocksRater.quarters_to_follow_growth)
 
     @staticmethod
-    def __calc_income_and_income_acceleration(line):
-        income_list = StocksRater.__get_data_list(line, StocksRater.income, 1, StocksRater.eps, 0)
-        income_acceleration = StocksRater.__calc_acceleration(income_list)
-        return income_list, income_acceleration
-
-    @staticmethod
-    def __calc_sales_and_sales_acceleration(line):
-        sales_list = StocksRater.__get_data_list(line, StocksRater.eps, 1, StocksRater.sales, 1)
-        sales_acceleration = StocksRater.__calc_acceleration(sales_list)
-        return sales_list, sales_acceleration
-
-    @staticmethod
-    def __get_data_list(line, first_delimiter, after_first_delimiter, second_delimiter, after_second_delimiter):
+    def get_data_list(line, first_delimiter, after_first_delimiter, second_delimiter, after_second_delimiter, quarters_to_follow):
         if not line:
             return None
         data_list = []
@@ -114,15 +125,15 @@ class StocksRater:
         end_index = data_as_string.find(']')
         if end_index > start_index + 1:
             data_as_string_list = data_as_string[start_index:(end_index + 1)].strip('][').split(', ')
-            data_list = StocksRater.__get_data_list_as_numbers(data_as_string_list)
+            data_list = StocksRater.get_data_list_as_numbers(data_as_string_list, quarters_to_follow)
         return data_list
 
     @staticmethod
-    def __get_data_list_as_numbers(data_as_string_list):
+    def get_data_list_as_numbers(data_as_string_list, quarters_to_follow):
         data_list = []
-        needed_quarters = (StocksRater.total_quarters - StocksRater.quarters_to_follow - StocksRater.quarters_to_look_back)
+        needed_quarters = (StocksRater.total_quarters - quarters_to_follow - StocksRater.quarters_to_look_back)
         for data_as_string in data_as_string_list:
-            data_as_number = StocksRater.__get_data_as_number(data_as_string)
+            data_as_number = StocksRater.get_data_as_number(data_as_string)
             if data_as_number or len(data_list) < needed_quarters:
                 data_list.append(data_as_number)
             else:
@@ -130,48 +141,105 @@ class StocksRater:
         return data_list
 
     @staticmethod
-    def __get_data_as_number(data_as_string):
+    def get_data_as_number(data_as_string):
         try:
             return float(data_as_string.replace(',', '')[2:-1])
         except ValueError:
             return None
 
     @staticmethod
-    def __calc_acceleration(data_list):
+    def get_accelerated_stock(stock_symbol, eps_list, income_list, sales_list):
+        if not eps_list or not income_list or not sales_list:
+            return None
+
+        eps_acceleration = StocksRater.calc_acceleration(eps_list)
+        income_acceleration = StocksRater.calc_acceleration(income_list)
+        sales_acceleration = StocksRater.calc_acceleration(sales_list)
+        if not eps_acceleration or not income_acceleration or not sales_acceleration:
+            return None
+
+        return AcceleratedStock(stock_symbol, eps_list, eps_acceleration, income_list, income_acceleration, sales_list,
+                                sales_acceleration)
+
+    @staticmethod
+    def calc_acceleration(data_list):
         if not data_list:
             return None
+
         acceleration = []
-        for quarter in range(StocksRater.quarters_to_follow * (-1), 0):
-            curr_q = data_list[quarter]
-            prev_q = data_list[quarter - StocksRater.quarters_to_look_back]
-            if prev_q >= curr_q:
+        for quarter in range(StocksRater.quarters_to_follow_acceleration * (-1), 0):
+            q_acceleration = StocksRater.calc_q_increase(data_list, quarter)
+            if not q_acceleration or (acceleration and q_acceleration <= acceleration[-1]):
                 return None
+            else:
+                acceleration.append(q_acceleration)
 
-            q_acceleration = round(curr_q * 100, 2) if prev_q == 0 else abs(round((curr_q - prev_q) / prev_q * 100, 2))
-            if acceleration and q_acceleration <= acceleration[-1]:
-                return None
-
-            acceleration.append(q_acceleration)
         return acceleration
 
-    def write_stocks_to_file(self):
-        if os.path.exists(self.__acceleration_stocks_file):
-            with open(self.__acceleration_stocks_file, 'r+') as f:
+    @staticmethod
+    def get_growth_stock(stock_symbol, eps_list):
+        if not eps_list:
+            return None
+
+        eps_growth = StocksRater.calc_growth(eps_list)
+        if not eps_growth:
+            return None
+
+        return GrowthStock(stock_symbol, eps_list, eps_growth)
+
+    @staticmethod
+    def calc_growth(data_list):
+        if not data_list:
+            return None
+
+        growth = []
+        for quarter in range(StocksRater.quarters_to_follow_growth * (-1), 0):
+            q_growth = StocksRater.calc_q_increase(data_list, quarter)
+            if not q_growth or q_growth < StocksRater.growth_threshold:
+                return None
+            else:
+                growth.append(q_growth)
+
+        return growth
+
+    @staticmethod
+    def calc_q_increase(data_list, quarter):
+        curr_q = data_list[quarter]
+        prev_q = data_list[quarter - StocksRater.quarters_to_look_back]
+        if prev_q >= curr_q:
+            return None
+
+        if prev_q == 0:
+            return round(curr_q * 100, 2)
+
+        return abs(round((curr_q - prev_q) / prev_q * 100, 2))
+
+    def write_accelerated_stocks_to_file(self):
+        StocksRater.write_stocks_to_file(self.acceleration_stocks_file, self.acceleration_stocks_heap)
+
+    def write_growth_stocks_to_file(self):
+        StocksRater.write_stocks_to_file(self.growth_stocks_file, self.growth_stocks_heap)
+
+    @staticmethod
+    def write_stocks_to_file(stocks_file, heap):
+        if os.path.exists(stocks_file):
+            with open(stocks_file, 'r+') as f:
                 f.truncate(0)  # need '0' when using r+
 
-        with open(self.__acceleration_stocks_file, 'a') as top_stocks:
-            while self.__acceleration_stocks_heap:
-                top_stocks.write(str(heappop(self.__acceleration_stocks_heap)) + '\n')
+        with open(stocks_file, 'a') as top_stocks:
+            while heap:
+                top_stocks.write(str(heappop(heap)) + '\n')
 
 
-def rate_stocks(stocks_info_file, acceleration_stocks_file):
-    rater = StocksRater(stocks_info_file, acceleration_stocks_file)
+def rate_stocks(stocks_info_file, acceleration_stocks_file, growth_stocks_file):
+    rater = StocksRater(stocks_info_file, acceleration_stocks_file, growth_stocks_file)
     rater.calc_top_stocks()
-    rater.write_stocks_to_file()
+    rater.write_accelerated_stocks_to_file()
+    rater.write_growth_stocks_to_file()
 
 
 def main():
-    rate_stocks("stock_db.txt", "acceleration_stocks.txt")
+    rate_stocks("stock_db.txt", "acceleration_stocks.txt", "growth_stocks.txt")
 
 
 if __name__ == "__main__":
