@@ -6,8 +6,11 @@ import ast
 from operator import eq, add, sub
 import sqlite3 
 from threading import Thread
+import threading
 import time
 import json
+from multiprocessing import Process, Value
+from concurrent.futures import ThreadPoolExecutor
 
 global_stock_dict = {}
 
@@ -20,10 +23,11 @@ class macrotrends_generic:
         self.__operation = operation
         self.__stock_path = stock_symbol +'/' + company_name + '/' + operation
         self.__macrotrends_list = []
+
+
+    def run(self):
         self.__soup = self.__get_html_profile_data(self.__stock_path)
-        self.__fill_nem_dict(self.__soup)
-        #Public methods and members
-        self.get_list = self.get_list_func()
+        self.__fill_macrotrends_list(self.__soup)
         self.fill_global_stock_dict()
 
     def __get_html_profile_data(self, stock_path):
@@ -33,7 +37,7 @@ class macrotrends_generic:
         return soup
     
             
-    def __fill_nem_dict(self,soup):
+    def __fill_macrotrends_list(self,soup):
         results = soup.findAll("th")
         j = 0 
         for res in results:
@@ -86,7 +90,7 @@ def write_db():
         sales_array = global_stock_dict[key][2]
 
         # open output file for writing
-        with open('stock_db.txt', 'r') as filehandle:
+        with open('stock_db.txt', 'a') as filehandle:
             filehandle.write(key +' net_income ')
             json.dump(net_income_array, filehandle)
             filehandle.write(' eps ')
@@ -95,26 +99,41 @@ def write_db():
             json.dump(sales_array, filehandle)
             filehandle.write('\n')
 
+
+
     
 def iteatre_over_stock_map(stock_map):
 
     i = 1
+    start = time.time()
+    pool = ThreadPoolExecutor(max_workers=100)
     for stock_symbol in stock_map:
         try:
             global global_stock_dict
             print(stock_symbol)
             global_stock_dict[stock_symbol] = ['','','']
-            temp1 = Thread(target = macrotrends_generic(stock_symbol,stock_map[stock_symbol], 'net-income'))
-            tmep2 = Thread(target = macrotrends_generic(stock_symbol,stock_map[stock_symbol],'eps-earnings-per-share-diluted')) 
-            temp3 = Thread(target = macrotrends_generic(stock_symbol,stock_map[stock_symbol],'revenue'))
+            sem = threading.Semaphore(4)
+
+            obj1 = macrotrends_generic(stock_symbol,stock_map[stock_symbol], 'net-income')
+            obj2 = macrotrends_generic(stock_symbol,stock_map[stock_symbol],'eps-earnings-per-share-diluted')
+            obj3 = macrotrends_generic(stock_symbol,stock_map[stock_symbol],'revenue')
+           
+            t1 =  pool.submit(obj1.run) 
+            t2 =  pool.submit(obj2.run) 
+            t3 =  pool.submit(obj3.run) 
+
             time.sleep(0.02)
-            if (i % 5 == 0):
+            if (i % 20 == 0):
                 time.sleep(0.05)
             i = i + 1
+
 
         except:
             print ('didnt work for'+ stock_symbol)
             pass
+    end = time.time()
+    print(end - start)
+    pool.shutdown(wait=True)
             
 def main():
 
