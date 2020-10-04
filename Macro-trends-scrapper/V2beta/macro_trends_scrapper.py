@@ -36,40 +36,37 @@ class MarketWatch_Scrapper_Financials:
         return soup
 
 
-    def generic_get_value(self,soup,str_val, str_class, target_line_num):
+    def generic_get_value(self,soup, value_to_serach, target_line_num):
         
-        results = self.soup.findAll(str_val,{"class":str_class})[target_line_num]
-        td_row_count = 0
-        target_row_location_number = 6
+        results = self.soup.findAll("tr",{"class":"childRow hidden"})[target_line_num]
+        number_of_quarters = 4
+        x = 0
         array_of_values = []
-        for row in results.findAll("td")  :
-
-            if (td_row_count == target_row_location_number):
-                target_line_not_parsed = str(row).split(':')[1]
-                target_line_parsed = target_line_not_parsed.split('}')[0]
-                if (target_line_parsed.find('null') != -1): 
-                    target_line_parsed = target_line_parsed.replace("null", "0")
-                array_of_values = ast.literal_eval(target_line_parsed)
-                print(array_of_values)
-                return array_of_values
-            
-            if (td_row_count > target_row_location_number):
-                break
-            
-            td_row_count = td_row_count + 1
         
+        for row in results.findAll("td")  :
+        
+            if (row.text == value_to_serach):
+                next_tag = row
+                for x in range(number_of_quarters+1):
+                    new_tag = next_tag.find_next("td")
+                    value_to_insert_to_array = new_tag.text
+                    if ( value_to_insert_to_array == '-'):
+                        value_to_insert_to_array = '0%'
+                    array_of_values.append(value_to_insert_to_array)
+                    next_tag = new_tag
+                    
         return array_of_values 
 
       
 
     def get_eps_growth(self):
-        return self.generic_get_value(self.soup,"tr","childRow hidden",10)
+        return self.generic_get_value(self.soup,"EPS (Basic) Growth",10)
         
     def get_net_income_growth(self):
-        return self.generic_get_value(self.soup,"tr","childRow hidden",8)    
+        return self.generic_get_value(self.soup,"Net Income Growth",8)    
     
     def get_sales_growth(self):
-        return self.generic_get_value(self.soup,"tr","childRow hidden",0)         
+        return self.generic_get_value(self.soup,"Sales Growth",0)         
 
 
     def fill_global_stock_dict(self):
@@ -138,7 +135,7 @@ def iteatre_over_stock_map(stock_map):
     
     pool = ThreadPoolExecutor(max_workers = maximum_thrads)
     for stock_symbol in stock_map:
-        try:
+        # try:
             global global_stock_dict
             print(stock_symbol)
             global_stock_dict[stock_symbol] = ['','','']
@@ -149,8 +146,8 @@ def iteatre_over_stock_map(stock_map):
             t1 =  pool.submit(market_watch_object.run) 
             time.sleep(timout_between_threads_creation)
 
-        except:
-            pass
+        # except:
+            # pass
             
     end = time.time()
     print(end - start)
