@@ -130,12 +130,12 @@ def write_db():
 def iteatre_over_stock_map(stock_map):
 
     start = time.time()
-    maximum_thrads = 100
+    maximum_thrads = 200
     timout_between_threads_creation = 0.02
     
     pool = ThreadPoolExecutor(max_workers = maximum_thrads)
     for stock_symbol in stock_map:
-        # try:
+        try:
             global global_stock_dict
             print(stock_symbol)
             global_stock_dict[stock_symbol] = ['','','']
@@ -146,8 +146,8 @@ def iteatre_over_stock_map(stock_map):
             t1 =  pool.submit(market_watch_object.run) 
             time.sleep(timout_between_threads_creation)
 
-        # except:
-            # pass
+        except:
+            pass
             
     end = time.time()
     print(end - start)
