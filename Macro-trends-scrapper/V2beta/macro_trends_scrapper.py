@@ -15,55 +15,8 @@ import os.path
 import requests
 import re
 
-
+# the keys are stock symbols and the values are eps , net-icome and sales growths arrays.
 global_stock_dict = {}
-
-# class yahoo_generic:
-
-    # def __init__(self,stock_symbol, company_name, operation):
-        # #Private methods and members
-        # self.__symbol = stock_symbol
-        # self.__company_name = company_name
-        # self.__operation = operation
-        # self.__yahoo_list = []
-
-
-    # def run(self):
-        # self.__soup = self.__get_html_profile_data()
-        # self.__fill_yahoo_list(self.__soup)
-        # self.fill_global_stock_dict()
-
-    # def __get_html_profile_data(self):
-        # URL = 'https://finance.yahoo.com/quote/'+self.__symbol+'/analysis?p='+self.__symbol
-        # page = requests.get(URL)
-        # soup = BeautifulSoup(page.content, 'html.parser')
-        # return soup
-    
-            
-    # def __fill_yahoo_list(self,soup):
-        # results = soup.findAll('span')
-        # j = 0 
-        # for res in results:
-            # if (res.getText() == 'EPS Actual'):
-                # for i in range(4):
-                    # res = res.find_next('td')
-                    # self.__yahoo_list.insert(0,res.text)
-
-        
-    
-    
-    # def get_list_func(self):
-        # return self.__yahoo_list
-        
-    # def fill_global_stock_dict(self):
-        # global global_stock_dict
-
-        # if (self.__operation == 'eps'):
-            # global_stock_dict[self.__symbol][0] = self.__yahoo_list
-        # elif (self.__operation == 'net-income'):
-            # global_stock_dict[self.__symbol][1] = self.__yahoo_list
-        # else:
-            # global_stock_dict[self.__symbol][2] = self.__yahoo_list
 
 
 
@@ -83,18 +36,29 @@ class MarketWatch_Scrapper_Financials:
         return soup
 
 
-    def generic_get_value(self,soup,str_val,str_class,num):
-        results = self.soup.findAll(str_val,{"class":str_class})[num]
-        count = 0
-        for row in results.findAll("td"):
-            if (count >=6):
-                a= str(row).split(':')[1]
-                b = a.split('}')[0]
-                if (b.find('null') != -1): 
-                    b = b.replace("null", "0")
-                res = ast.literal_eval(b) 
-            count = count + 1
-        return res 
+    def generic_get_value(self,soup,str_val, str_class, target_line_num):
+        
+        results = self.soup.findAll(str_val,{"class":str_class})[target_line_num]
+        td_row_count = 0
+        target_row_location_number = 6
+        array_of_values = []
+        for row in results.findAll("td")  :
+
+            if (td_row_count == target_row_location_number):
+                target_line_not_parsed = str(row).split(':')[1]
+                target_line_parsed = target_line_not_parsed.split('}')[0]
+                if (target_line_parsed.find('null') != -1): 
+                    target_line_parsed = target_line_parsed.replace("null", "0")
+                array_of_values = ast.literal_eval(target_line_parsed)
+                print(array_of_values)
+                return array_of_values
+            
+            if (td_row_count > target_row_location_number):
+                break
+            
+            td_row_count = td_row_count + 1
+        
+        return array_of_values 
 
       
 
@@ -135,35 +99,44 @@ def read_stock_file(file_path):
     
 def write_db():
     db_file = 'stock_db.txt'
+    failed_stocks_file = 'failed_stocks.txt'
 
     if os.path.exists(db_file):
         with open(db_file, 'r+') as f:
             f.truncate(0)  # need '0' when using r+
 
-    for key in global_stock_dict:
+    for stock_symbol in global_stock_dict:
 
-        eps_growth_array = global_stock_dict[key][0]
-        net_income_growth_array = global_stock_dict[key][1]
-        sales_growth_array = global_stock_dict[key][2]
+        eps_growth_array = global_stock_dict[stock_symbol][0]
+        net_income_growth_array = global_stock_dict[stock_symbol][1]
+        sales_growth_array = global_stock_dict[stock_symbol][2]
 
-        # open output file for writing
-        with open('stock_db.txt', 'a') as filehandle:
-            filehandle.write(key +' net_income_growth ')
-            json.dump(net_income_growth_array, filehandle)
-            filehandle.write(' eps_growth ')
-            json.dump(eps_growth_array, filehandle)
-            filehandle.write(' sales_growth ')
-            json.dump(sales_growth_array, filehandle)
-            filehandle.write('\n')
+        if ( not eps_growth_array ) and ( not net_income_growth_array ) and ( not sales_growth_array):
+            with open(failed_stocks_file, 'a') as filehandle:
+                filehandle.write(stock_symbol+'\n')
+        
+        else :
+        
+            # open output file for writing
+            with open(db_file, 'a') as filehandle:
+                filehandle.write(stock_symbol +' net_income_growth ')
+                json.dump(net_income_growth_array, filehandle)
+                filehandle.write(' eps_growth ')
+                json.dump(eps_growth_array, filehandle)
+                filehandle.write(' sales_growth ')
+                json.dump(sales_growth_array, filehandle)
+                filehandle.write('\n')
 
 
 
     
 def iteatre_over_stock_map(stock_map):
 
-    i = 1
     start = time.time()
-    pool = ThreadPoolExecutor(max_workers=100)
+    maximum_thrads = 100
+    timout_between_threads_creation = 0.02
+    
+    pool = ThreadPoolExecutor(max_workers = maximum_thrads)
     for stock_symbol in stock_map:
         try:
             global global_stock_dict
@@ -171,31 +144,23 @@ def iteatre_over_stock_map(stock_map):
             global_stock_dict[stock_symbol] = ['','','']
             sem = threading.Semaphore(4)
 
-            obj1 = MarketWatch_Scrapper_Financials(stock_symbol)
-            # obj2 = macrotrends_generic(stock_symbol,stock_map[stock_symbol],'eps-earnings-per-share-diluted')
-            # obj3 = macrotrends_generic(stock_symbol,stock_map[stock_symbol],'revenue')
-            t1 =  pool.submit(obj1.run) 
-            # t2 =  pool.submit(obj2.run) 
-            # t3 =  pool.submit(obj3.run) 
+            market_watch_object = MarketWatch_Scrapper_Financials(stock_symbol)
 
-            time.sleep(0.02)
-            if (i % 20 == 0):
-                time.sleep(0.05)
-            i = i + 1
-
+            t1 =  pool.submit(market_watch_object.run) 
+            time.sleep(timout_between_threads_creation)
 
         except:
-            print ('didnt work for'+ stock_symbol)
             pass
+            
     end = time.time()
     print(end - start)
     pool.shutdown(wait=True)
             
 def main():
     
-    # stock1 = MarketWatch_Scrapper_Financials('prsc')
-    # stock1.run()
-    stock_map = read_stock_file("all_stocks.txt")
+    stock_symbols_file = "all_stocks.txt"
+    
+    stock_map = read_stock_file(stock_symbols_file)
     iteatre_over_stock_map(stock_map)
     write_db()
     
