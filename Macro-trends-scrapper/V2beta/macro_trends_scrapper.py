@@ -48,7 +48,7 @@ class MarketWatch_Scrapper_Financials:
                 value_to_insert_to_array = '0%'
             array_of_values.append(value_to_insert_to_array)
             next_tag = new_tag
-        print(array_of_values)
+
         return array_of_values
 
     def generic_get_value(self):
