@@ -60,7 +60,7 @@ class MarketWatch_Scrapper_Financials:
           
           for row in soup_result.findAll("td")  :
 
-            if (row.text == "EPS (Basic) Growth"):
+            if (row.text == "EPS (Basic) Growth") or (row.text == "EPS (Basic) - Growth"):
                 global_stock_dict[self.stock_name][0] = self.get_growth_array(row, number_of_quarters)
             
             if (row.text == "Net Income Growth"):
