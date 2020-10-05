@@ -132,7 +132,7 @@ def iteatre_over_stock_map(stock_map):
         try:
             global global_stock_dict
             print(stock_symbol)
-            global_stock_dict[stock_symbol] = ['','','']
+            global_stock_dict[stock_symbol] = [[],[],[]]
             sem = threading.Semaphore(4)
 
             market_watch_object = MarketWatch_Scrapper_Financials(stock_symbol)
