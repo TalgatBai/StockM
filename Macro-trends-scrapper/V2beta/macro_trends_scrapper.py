@@ -27,7 +27,7 @@ class MarketWatch_Scrapper_Financials:
     
     def run(self):
         self.soup = self.get_html_financial_data()
-        self.fill_global_stock_dict()  
+        self.generic_get_value()  
 
     def get_html_financial_data(self):
         URL = 'https://www.marketwatch.com/investing/stock/'+self.stock_name+'/financials/balance-/quarter'
@@ -36,45 +36,39 @@ class MarketWatch_Scrapper_Financials:
         return soup
 
 
-    def generic_get_value(self,soup, value_to_serach, target_line_num):
+    def get_growth_array(self, row, number_of_quarters):
         
-        results = self.soup.findAll("tr",{"class":"childRow hidden"})[target_line_num]
-        number_of_quarters = 4
-        x = 0
         array_of_values = []
+        next_tag = row
+        x = 0
+        for x in range(number_of_quarters+1):
+            new_tag = next_tag.find_next("td")
+            value_to_insert_to_array = new_tag.text
+            if ( value_to_insert_to_array == '-'):
+                value_to_insert_to_array = '0%'
+            array_of_values.append(value_to_insert_to_array)
+            next_tag = new_tag
+        print(array_of_values)
+        return array_of_values
+
+    def generic_get_value(self):
         
-        for row in results.findAll("td")  :
-        
-            if (row.text == value_to_serach):
-                next_tag = row
-                for x in range(number_of_quarters+1):
-                    new_tag = next_tag.find_next("td")
-                    value_to_insert_to_array = new_tag.text
-                    if ( value_to_insert_to_array == '-'):
-                        value_to_insert_to_array = '0%'
-                    array_of_values.append(value_to_insert_to_array)
-                    next_tag = new_tag
-                    
-        return array_of_values 
 
-      
+        soup_results_array = self.soup.findAll("tr",{"class":"childRow hidden"})
+        number_of_quarters = 4
+        for soup_result in soup_results_array :        
+          
+          for row in soup_result.findAll("td")  :
 
-    def get_eps_growth(self):
-        return self.generic_get_value(self.soup,"EPS (Basic) Growth",10)
-        
-    def get_net_income_growth(self):
-        return self.generic_get_value(self.soup,"Net Income Growth",8)    
-    
-    def get_sales_growth(self):
-        return self.generic_get_value(self.soup,"Sales Growth",0)         
-
-
-    def fill_global_stock_dict(self):
-        global global_stock_dict
-
-        global_stock_dict[self.stock_name][0] = self.get_eps_growth()
-        global_stock_dict[self.stock_name][1] = self.get_net_income_growth()
-        global_stock_dict[self.stock_name][2] = self.get_sales_growth()
+            if (row.text == "EPS (Basic) Growth"):
+                global_stock_dict[self.stock_name][0] = self.get_growth_array(row, number_of_quarters)
+            
+            if (row.text == "Net Income Growth"):
+                global_stock_dict[self.stock_name][1] = self.get_growth_array(row, number_of_quarters)            
+            
+            if (row.text == "Sales Growth"):
+                global_stock_dict[self.stock_name][2] = self.get_growth_array(row, number_of_quarters)
+           
 
 
               
