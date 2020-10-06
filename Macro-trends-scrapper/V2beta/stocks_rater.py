@@ -65,14 +65,14 @@ class GrowthStock:
 
 
 class StocksRater:
-    total_quarters = 12
+    total_quarters = 4
     quarters_to_follow_growth = 3
     quarters_to_follow_acceleration = 2
-    quarters_to_look_back = 1
-    income = 'net_income'
-    eps = 'eps'
-    sales = 'sales'
+    income = 'net_income_growth'
+    eps = 'eps_growth'
+    sales = 'sales_growth'
     growth_threshold = 50
+    delimiters = ['"', '%', ',']
 
     def __init__(self, stocks_info_file, acceleration_stocks_file, growth_stocks_file):
         self.growth_stocks_heap = []
@@ -92,31 +92,20 @@ class StocksRater:
                     continue
 
                 stock_symbol = line.split()[0]
-                eps_list = StocksRater.get_data_list_for_acceleration(line, StocksRater.eps, 1, StocksRater.sales, 0)
-                income_list = StocksRater.get_data_list_for_acceleration(line, StocksRater.income, 1, StocksRater.eps, 0)
-                sales_list = StocksRater.get_data_list_for_acceleration(line, StocksRater.eps, 1, StocksRater.sales, 1)
+                eps_list = StocksRater.get_data_list(line, StocksRater.eps, 1, StocksRater.sales, 0)
+                income_list = StocksRater.get_data_list(line, StocksRater.income, 1, StocksRater.eps, 0)
+                sales_list = StocksRater.get_data_list(line, StocksRater.eps, 1, StocksRater.sales, 1)
 
                 accelerated_stock = StocksRater.get_accelerated_stock(stock_symbol, eps_list, income_list, sales_list)
                 if accelerated_stock:
                     heappush(self.acceleration_stocks_heap, accelerated_stock)
 
-                eps_list = StocksRater.get_data_list_for_growth(line, StocksRater.eps, 1, StocksRater.sales, 0)
                 growth_stock = StocksRater.get_growth_stock(stock_symbol, eps_list)
                 if growth_stock:
                     heappush(self.growth_stocks_heap, growth_stock)
 
     @staticmethod
-    def get_data_list_for_acceleration(line, first_delimiter, after_first_delimiter, second_delimiter, after_second_delimiter):
-        return StocksRater.get_data_list(line, first_delimiter, after_first_delimiter, second_delimiter,
-                                         after_second_delimiter, StocksRater.quarters_to_follow_acceleration)
-
-    @staticmethod
-    def get_data_list_for_growth(line, first_delimiter, after_first_delimiter, second_delimiter, after_second_delimiter):
-        return StocksRater.get_data_list(line, first_delimiter, after_first_delimiter, second_delimiter,
-                                         after_second_delimiter, StocksRater.quarters_to_follow_growth)
-
-    @staticmethod
-    def get_data_list(line, first_delimiter, after_first_delimiter, second_delimiter, after_second_delimiter, quarters_to_follow):
+    def get_data_list(line, first_delimiter, after_first_delimiter, second_delimiter, after_second_delimiter):
         if not line:
             return None
         data_list = []
@@ -125,25 +114,26 @@ class StocksRater:
         end_index = data_as_string.find(']')
         if end_index > start_index + 1:
             data_as_string_list = data_as_string[start_index:(end_index + 1)].strip('][').split(', ')
-            data_list = StocksRater.get_data_list_as_numbers(data_as_string_list, quarters_to_follow)
+            data_list = StocksRater.get_data_list_as_numbers(data_as_string_list)
         return data_list
 
     @staticmethod
-    def get_data_list_as_numbers(data_as_string_list, quarters_to_follow):
+    def get_data_list_as_numbers(data_as_string_list):
         data_list = []
-        needed_quarters = (StocksRater.total_quarters - quarters_to_follow - StocksRater.quarters_to_look_back)
         for data_as_string in data_as_string_list:
             data_as_number = StocksRater.get_data_as_number(data_as_string)
-            if data_as_number or len(data_list) < needed_quarters:
-                data_list.append(data_as_number)
-            else:
+            if data_as_number is None:
                 return None
+            else:
+                data_list.append(data_as_number)
         return data_list
 
     @staticmethod
     def get_data_as_number(data_as_string):
         try:
-            return float(data_as_string.replace(',', '')[2:-1])
+            for delimiter in StocksRater.delimiters:
+                data_as_string = data_as_string.replace(delimiter, '')
+            return float(data_as_string)
         except ValueError:
             return None
 
@@ -168,8 +158,8 @@ class StocksRater:
 
         acceleration = []
         for quarter in range(StocksRater.quarters_to_follow_acceleration * (-1), 0):
-            q_acceleration = StocksRater.calc_q_increase(data_list, quarter)
-            if not q_acceleration or (acceleration and q_acceleration <= acceleration[-1]):
+            q_acceleration = data_list[quarter]
+            if q_acceleration <= 0 or (acceleration and q_acceleration <= acceleration[-1]):
                 return None
             else:
                 acceleration.append(q_acceleration)
@@ -194,25 +184,13 @@ class StocksRater:
 
         growth = []
         for quarter in range(StocksRater.quarters_to_follow_growth * (-1), 0):
-            q_growth = StocksRater.calc_q_increase(data_list, quarter)
-            if not q_growth or q_growth < StocksRater.growth_threshold:
+            q_growth = data_list[quarter]
+            if q_growth < StocksRater.growth_threshold:
                 return None
             else:
                 growth.append(q_growth)
 
         return growth
-
-    @staticmethod
-    def calc_q_increase(data_list, quarter):
-        curr_q = data_list[quarter]
-        prev_q = data_list[quarter - StocksRater.quarters_to_look_back]
-        if prev_q >= curr_q:
-            return None
-
-        if prev_q == 0:
-            return round(curr_q * 100, 2)
-
-        return abs(round((curr_q - prev_q) / prev_q * 100, 2))
 
     def write_accelerated_stocks_to_file(self):
         StocksRater.write_stocks_to_file(self.acceleration_stocks_file, self.acceleration_stocks_heap)
