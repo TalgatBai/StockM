@@ -14,64 +14,12 @@ from concurrent.futures import ThreadPoolExecutor
 import os.path
 import requests
 import re
+from marketwatch_stock_financials_class import marketwatch_stock_financials_class
 
 # the keys are stock symbols and the values are eps , net-icome and sales growths arrays.
 global_stock_dict = {}
 
-
-
-class MarketWatch_Scrapper_Financials:
-
-    def __init__(self,stock_name):
-        self.stock_name = stock_name
-    
-    def run(self):
-        self.soup = self.get_html_financial_data()
-        self.generic_get_value()  
-
-    def get_html_financial_data(self):
-        URL = 'https://www.marketwatch.com/investing/stock/'+self.stock_name+'/financials/balance-/quarter'
-        page = requests.get(URL)
-        soup = BeautifulSoup(page.content, 'html.parser')
-        return soup
-
-
-    def get_growth_array(self, row, number_of_quarters):
-        
-        array_of_values = []
-        next_tag = row
-        x = 0
-        for x in range(number_of_quarters+1):
-            new_tag = next_tag.find_next("td")
-            value_to_insert_to_array = new_tag.text
-            if ( value_to_insert_to_array == '-'):
-                value_to_insert_to_array = '0%'
-            array_of_values.append(value_to_insert_to_array)
-            next_tag = new_tag
-
-        return array_of_values
-
-    def generic_get_value(self):
-        
-
-        soup_results_array = self.soup.findAll("tr",{"class":"childRow hidden"})
-        number_of_quarters = 4
-        for soup_result in soup_results_array :        
-          
-          for row in soup_result.findAll("td")  :
-
-            if (row.text == "EPS (Basic) Growth") or (row.text == "EPS (Basic) - Growth"):
-                global_stock_dict[self.stock_name][0] = self.get_growth_array(row, number_of_quarters)
             
-            if (row.text == "Net Income Growth"):
-                global_stock_dict[self.stock_name][1] = self.get_growth_array(row, number_of_quarters)            
-            
-            if (row.text == "Sales Growth"):
-                global_stock_dict[self.stock_name][2] = self.get_growth_array(row, number_of_quarters)
-           
-
-
-              
 
 def read_stock_file(file_path):
     stock_map = {}
@@ -118,7 +66,12 @@ def write_db():
                 json.dump(sales_growth_array, filehandle)
                 filehandle.write('\n')
 
-
+def fill_global_stock_dict_with_stock(stock_symbol):
+    
+    stock = marketwatch_stock_financials_class(stock_symbol)
+    global_stock_dict[stock_symbol][0] = stock.get_q_eps_growth_array()  
+    global_stock_dict[stock_symbol][1] = stock.get_q_net_income_growth_array()
+    global_stock_dict[stock_symbol][2] = stock.get_q_sales_growth_array() 
 
     
 def iteatre_over_stock_map(stock_map):
@@ -135,9 +88,7 @@ def iteatre_over_stock_map(stock_map):
             global_stock_dict[stock_symbol] = [[],[],[]]
             sem = threading.Semaphore(4)
 
-            market_watch_object = MarketWatch_Scrapper_Financials(stock_symbol)
-
-            t1 =  pool.submit(market_watch_object.run) 
+            t1 =  pool.submit(fill_global_stock_dict_with_stock, stock_symbol) 
             time.sleep(timout_between_threads_creation)
 
         except:
