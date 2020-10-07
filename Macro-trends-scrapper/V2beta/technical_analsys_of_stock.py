@@ -29,7 +29,7 @@ def get_relative_time_precentage(nyc_datetime) :
     
 
 
-def detect_breakout(stock, volume_threshold):
+def detect_breakout(stock, volume_threshold, precent_threshold):
     
     is_breakout = False
     nyc_datetime = datetime.datetime.now(pytz.timezone('US/Eastern'))
@@ -42,8 +42,9 @@ def detect_breakout(stock, volume_threshold):
     stock_3m_avg_volume = stock.get_three_month_avg_daily_volume()
     relative_time_precentage = get_relative_time_precentage(nyc_datetime)
     stock_3m_avg_relative_volume = relative_time_precentage * stock_3m_avg_volume
+    stock_current_precent_change = stock.get_current_percent_change()
 
-    if (stock_current_volume >= stock_3m_avg_relative_volume * volume_threshold):
+    if (stock_current_volume >= stock_3m_avg_relative_volume * volume_threshold) and (stock_current_precent_change >= precent_threshold ):
         is_breakout =  True
     
     
@@ -74,8 +75,10 @@ def validate_stock_technically(stock):
             
 def main():
     
-    stock = YahooFinancials('WMS')
-    print(detect_breakout(stock, 1.5))
+    stock = YahooFinancials('ETSY')
+    
+    if (detect_breakout(stock, 1.1,0.02) == True):
+        print("ETSY breakout on:" + str(stock.get_current_percent_change()*100) + "% change")
     print(validate_stock_technically(stock))
 
     
