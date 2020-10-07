@@ -44,6 +44,10 @@ def write_db():
         with open(db_file, 'r+') as f:
             f.truncate(0)  # need '0' when using r+
 
+    if os.path.exists(failed_stocks_file):
+        with open(db_file, 'r+') as f:
+            f.truncate(0)  # need '0' when using r+
+
     for stock_symbol in global_stock_dict:
 
         eps_growth_array = global_stock_dict[stock_symbol][0]
@@ -67,11 +71,11 @@ def write_db():
                 filehandle.write('\n')
 
 def fill_global_stock_dict_with_stock(stock_symbol):
-    
+
     stock = marketwatch_stock_financials_class(stock_symbol)
-    global_stock_dict[stock_symbol][0] = stock.get_q_eps_growth_array()  
+    global_stock_dict[stock_symbol][0] = stock.get_q_eps_growth_array()
     global_stock_dict[stock_symbol][1] = stock.get_q_net_income_growth_array()
-    global_stock_dict[stock_symbol][2] = stock.get_q_sales_growth_array() 
+    global_stock_dict[stock_symbol][2] = stock.get_q_sales_growth_array()
 
     
 def iteatre_over_stock_map(stock_map):
@@ -79,7 +83,7 @@ def iteatre_over_stock_map(stock_map):
     start = time.time()
     maximum_thrads = 200
     timout_between_threads_creation = 0.02
-    
+
     pool = ThreadPoolExecutor(max_workers = maximum_thrads)
     for stock_symbol in stock_map:
         try:
@@ -93,7 +97,7 @@ def iteatre_over_stock_map(stock_map):
 
         except:
             pass
-            
+
     end = time.time()
     print(end - start)
     pool.shutdown(wait=True)
