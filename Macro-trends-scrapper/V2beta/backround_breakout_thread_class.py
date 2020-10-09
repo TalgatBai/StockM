@@ -19,7 +19,7 @@ from functools import partial
 
 
 def send_whatsapp_message(group_name, message_to_send):
-
+    print('here')
     options = Options()
     options.add_argument('--profile-directory=Default')
     options.add_argument('--user-data-dir=C:/Temp/ChromeProfile')
@@ -81,9 +81,9 @@ class backround_breakout_thread_class(object):
             return
 
         yahoo_stock = YahooFinancials(stock)
-        if self.__detect_breakout(yahoo_stock, 1.5, 0.03, pivot) :
+        if self.__detect_breakout(yahoo_stock, 1.4, 0.03, pivot,stock) :
             self.breakout_stocks.add(stock)
-            msg = 'Buy alert for' + stock + 'at volume ' + yahoo_stock.get_current_volume()
+            msg = 'Buy alert for ' + stock
             send_whatsapp_message('"Stocks alerts"', msg)
 
 
@@ -114,7 +114,7 @@ class backround_breakout_thread_class(object):
         return True
 
 
-    def __detect_breakout(self, stock, volume_threshold, percent_threshold, pivot_point):
+    def __detect_breakout(self, stock, volume_threshold, percent_threshold, pivot_point, stock_symbol):
 
         is_breakout = False
         nyc_datetime = datetime.datetime.now(pytz.timezone('US/Eastern'))
@@ -130,9 +130,11 @@ class backround_breakout_thread_class(object):
         stock_current_percent_change = stock.get_current_percent_change()
         stock_current_price = stock.get_current_price()
 
-        if (stock_current_volume >= stock_3m_avg_relative_volume * volume_threshold) and (stock_current_percent_change >= percent_threshold) and (pivot_point <= stock_current_price ):
+        if (stock_current_volume >= stock_3m_avg_relative_volume * volume_threshold) and (stock_current_percent_change >= percent_threshold) and (float(pivot_point) <= stock_current_price ):
+            print('is_breakout')
             is_breakout = True
-
+        else:
+            print ('no breakout so far for :')
         return is_breakout
 
     def __get_map_of_stocks(self):
@@ -152,6 +154,7 @@ class backround_breakout_thread_class(object):
 
 
 def main():
+
     backround_onj = backround_breakout_thread_class()
     a = 1
 if __name__ == "__main__":
