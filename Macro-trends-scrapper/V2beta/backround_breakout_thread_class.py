@@ -1,4 +1,6 @@
 import threading
+from concurrent.futures.thread import ThreadPoolExecutor
+
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -13,9 +15,11 @@ import datetime
 import pytz
 import concurrent.futures
 import os
+from functools import partial
 
 
 def send_whatsapp_message(group_name, message_to_send):
+
     options = Options()
     options.add_argument('--profile-directory=Default')
     options.add_argument('--user-data-dir=C:/Temp/ChromeProfile')
@@ -38,32 +42,65 @@ def send_whatsapp_message(group_name, message_to_send):
     driver.close()
 
 
+
+
+
 class backround_breakout_thread_class(object):
 
     def __init__(self):
 
-        self.stocks_set = self.__get_set_of_stocks()
-        thread = threading.Thread(target=self.run)
-        thread.daemon = True
-        thread.start()
-        thread.join()
+        self.stocks_map = self.__get_map_of_stocks()
+        self.breakout_stocks = set()
+
+        try:
+            thread = threading.Thread(target=self.run)
+            thread.daemon = True
+            thread.start()
+            while thread.isAlive():
+                thread.join(1)
+        except (KeyboardInterrupt, SystemExit):
+            print('program closed by user')
 
     def run(self):
 
-        sleep_time = 10
-        while True:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.stocks_set)) as executor:
-                executor.map(self.__run_yahoo_stock, self.stocks_set)
-            time.sleep(sleep_time)
+        timer_of_breakout_checking = 60 * 15
+        timer_between_whatsapp_writing = 20
+        pool = ThreadPoolExecutor(max_workers = 10)
 
-    def __run_yahoo_stock(self, stock):
+        while True:
+
+            for stock in self.stocks_map:
+                t1 =  pool.submit(self.__run_yahoo_stock, stock, self.stocks_map[stock])
+                time.sleep(timer_between_whatsapp_writing)
+
+            time.sleep(timer_of_breakout_checking)
+
+    def __run_yahoo_stock(self, stock, pivot):
+
+        if (stock in self.breakout_stocks):
+            return
 
         yahoo_stock = YahooFinancials(stock)
-        if self.__detect_breakout(yahoo_stock, 1.2, 0.001) :
+        if self.__detect_breakout(yahoo_stock, 1.5, 0.03, pivot) :
+            self.breakout_stocks.add(stock)
             msg = 'Buy alert for' + stock + 'at volume ' + yahoo_stock.get_current_volume()
             send_whatsapp_message('"Stocks alerts"', msg)
 
+
+
+    def __get_relative_time_percentage(self, nyc_datetime):
+
+        time_of_nasdaq_open_in_minutes = 390
+        hour_difference = nyc_datetime.hour - 9
+        hour_difference_in_minutes = hour_difference * 60
+        minutes_difference = nyc_datetime.minute - 30
+        sum_of_min_difference = minutes_difference + hour_difference_in_minutes
+        return sum_of_min_difference / time_of_nasdaq_open_in_minutes
+
     def __is_market_open(self, nyc_datetime):
+
+        if (nyc_datetime.isoweekday() == 6) or (nyc_datetime.isoweekday() == 7):
+            return False
 
         if (nyc_datetime.hour < 9) or (nyc_datetime.hour > 16):
             return False
@@ -76,16 +113,8 @@ class backround_breakout_thread_class(object):
 
         return True
 
-    def __get_relative_time_percentage(self, nyc_datetime):
 
-        time_of_nasdaq_open_in_minutes = 390
-        hour_difference = nyc_datetime.hour - 9
-        hour_difference_in_minutes = hour_difference * 60
-        minutes_difference = nyc_datetime.minute - 30
-        sum_of_min_difference = minutes_difference + hour_difference_in_minutes
-        return sum_of_min_difference / time_of_nasdaq_open_in_minutes
-
-    def __detect_breakout(self, stock, volume_threshold, percent_threshold):
+    def __detect_breakout(self, stock, volume_threshold, percent_threshold, pivot_point):
 
         is_breakout = False
         nyc_datetime = datetime.datetime.now(pytz.timezone('US/Eastern'))
@@ -99,30 +128,33 @@ class backround_breakout_thread_class(object):
         relative_time_percentage = self.__get_relative_time_percentage(nyc_datetime)
         stock_3m_avg_relative_volume = relative_time_percentage * stock_3m_avg_volume
         stock_current_percent_change = stock.get_current_percent_change()
+        stock_current_price = stock.get_current_price()
 
-        if (stock_current_volume >= stock_3m_avg_relative_volume * volume_threshold) and (stock_current_percent_change >= percent_threshold):
+        if (stock_current_volume >= stock_3m_avg_relative_volume * volume_threshold) and (stock_current_percent_change >= percent_threshold) and (pivot_point <= stock_current_price ):
             is_breakout = True
 
         return is_breakout
 
-    def __get_set_of_stocks(self):
+    def __get_map_of_stocks(self):
 
-        stocks_set = set()
+        stocks_map = {}
         file = 'technically_valid_stocks.txt'
         try:
             with open(file, 'r+') as f:
                 for line in f:
                     stock_symbol = line.split(',')[0]
-                    stocks_set.add(stock_symbol)
+                    pivot_point = line.split(' ')[2].rstrip()
+                    stocks_map[stock_symbol] = pivot_point
         except:
             print('Failed to read file')
 
-        return stocks_set
+        return stocks_map
 
 
 def main():
     backround_onj = backround_breakout_thread_class()
-
-
+    a = 1
 if __name__ == "__main__":
+
+
     main()
