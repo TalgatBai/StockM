@@ -93,7 +93,7 @@ class backround_breakout_thread_class(object):
 
             self.breakout_stocks.add(stock_symbol)
             msg_to_send = 'Buy alert for ' + stock_symbol
-            send_whatsapp_message('"Stocks alerts"', msg_to_send+ ' As volume is bigger by : ' + stock_volume_increase_ratio +'than the avarage')
+            send_whatsapp_message('"Stocks alerts"', msg_to_send+ ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage')
 
             self.lock.release()
 
