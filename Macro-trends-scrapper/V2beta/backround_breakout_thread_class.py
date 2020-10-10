@@ -125,7 +125,7 @@ class backround_breakout_thread_class(object):
 
 
     def __detect_breakout(self, stock, volume_threshold, percent_threshold, pivot_point, stock_symbol):
-        return "1.5"
+
         msg_to_send_if_breakout = False
         nyc_datetime = datetime.datetime.now(pytz.timezone('US/Eastern'))
         market_open_flag = self.__is_market_open(nyc_datetime)
