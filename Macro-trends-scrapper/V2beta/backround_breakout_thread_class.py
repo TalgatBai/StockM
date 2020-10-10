@@ -16,10 +16,12 @@ import pytz
 import concurrent.futures
 import os
 from functools import partial
+from collections import deque
+
 
 
 def send_whatsapp_message(group_name, message_to_send):
-    print('here')
+
     options = Options()
     options.add_argument('--profile-directory=Default')
     options.add_argument('--user-data-dir=C:/Temp/ChromeProfile')
@@ -49,8 +51,10 @@ class backround_breakout_thread_class(object):
 
     def __init__(self):
 
-        self.stocks_map = self.__get_map_of_stocks()
+        self.stocks_set = self.__get_set_of_stocks()
         self.breakout_stocks = set()
+        self.whatsapp_msg_queue = deque()
+        self.lock = threading.Lock()
 
         try:
             thread = threading.Thread(target=self.run)
@@ -64,28 +68,39 @@ class backround_breakout_thread_class(object):
     def run(self):
 
         timer_of_breakout_checking = 60 * 15
-        timer_between_whatsapp_writing = 20
         pool = ThreadPoolExecutor(max_workers = 10)
 
         while True:
 
-            for stock in self.stocks_map:
-                t1 =  pool.submit(self.__run_yahoo_stock, stock, self.stocks_map[stock])
-                time.sleep(timer_between_whatsapp_writing)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.stocks_set)) as executor:
+                executor.map(self.__run_yahoo_stock, self.stocks_set)
+
+            for msg_to_send in self.whatsapp_msg_queue:
+                send_whatsapp_message('"Stocks alerts"', msg_to_send)
+
+            self.whatsapp_msg_queue.clear()
 
             time.sleep(timer_of_breakout_checking)
 
-    def __run_yahoo_stock(self, stock, pivot):
+    def __run_yahoo_stock(self, stock_symbol_and_pivot):
 
-        if (stock in self.breakout_stocks):
+
+        stock_symbol = stock_symbol_and_pivot.split(':')[0]
+        pivot = stock_symbol_and_pivot.split(':')[1]
+        yahoo_stock = YahooFinancials(stock_symbol)
+
+        if (stock_symbol in self.breakout_stocks):
             return
 
-        yahoo_stock = YahooFinancials(stock)
-        if self.__detect_breakout(yahoo_stock, 1.4, 0.03, pivot,stock) :
-            self.breakout_stocks.add(stock)
-            msg = 'Buy alert for ' + stock
-            send_whatsapp_message('"Stocks alerts"', msg)
+        if self.__detect_breakout(yahoo_stock, 1.4, 0.03, pivot,stock_symbol):
 
+            self.lock.acquire()
+
+            self.breakout_stocks.add(stock_symbol)
+            msg = 'Buy alert for ' + stock_symbol
+            self.whatsapp_msg_queue.append(msg)
+
+            self.lock.release()
 
 
     def __get_relative_time_percentage(self, nyc_datetime):
@@ -131,26 +146,26 @@ class backround_breakout_thread_class(object):
         stock_current_price = stock.get_current_price()
 
         if (stock_current_volume >= stock_3m_avg_relative_volume * volume_threshold) and (stock_current_percent_change >= percent_threshold) and (float(pivot_point) <= stock_current_price ):
-            print('is_breakout')
+            print('is_breakout for :'+ stock_symbol)
             is_breakout = True
         else:
-            print ('no breakout so far for :')
+            print ('no breakout so far for :' + stock_symbol)
         return is_breakout
 
-    def __get_map_of_stocks(self):
+    def __get_set_of_stocks(self):
 
-        stocks_map = {}
+        stocks_set = set()
         file = 'technically_valid_stocks.txt'
         try:
             with open(file, 'r+') as f:
                 for line in f:
                     stock_symbol = line.split(',')[0]
                     pivot_point = line.split(' ')[2].rstrip()
-                    stocks_map[stock_symbol] = pivot_point
+                    stocks_set.add(stock_symbol+":"+pivot_point)
         except:
             print('Failed to read file')
 
-        return stocks_map
+        return stocks_set
 
 
 def main():
