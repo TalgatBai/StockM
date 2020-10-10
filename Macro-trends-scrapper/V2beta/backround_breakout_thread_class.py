@@ -171,7 +171,7 @@ class backround_breakout_thread_class(object):
 def main():
 
     backround_onj = backround_breakout_thread_class()
-    a = 1
+
 if __name__ == "__main__":
 
 
