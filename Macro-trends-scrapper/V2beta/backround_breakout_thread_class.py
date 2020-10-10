@@ -142,7 +142,7 @@ class backround_breakout_thread_class(object):
 
         if (stock_current_volume >= stock_3m_avg_relative_volume * volume_threshold) and (stock_current_percent_change >= percent_threshold) and (float(pivot_point) <= stock_current_price ):
             print('is_breakout for :'+ stock_symbol)
-            msg_to_send_if_breakout = str(stock_current_volume / stock_3m_avg_relative_volume * volume_threshold)
+            msg_to_send_if_breakout = str(stock_current_volume / (stock_3m_avg_relative_volume * volume_threshold))
         else:
             print ('no breakout so far for :' + stock_symbol)
         return msg_to_send_if_breakout
