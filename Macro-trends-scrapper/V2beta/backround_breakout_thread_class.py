@@ -53,7 +53,6 @@ class backround_breakout_thread_class(object):
 
         self.stocks_set = self.__get_set_of_stocks()
         self.breakout_stocks = set()
-        self.whatsapp_msg_queue = deque()
         self.lock = threading.Lock()
 
         try:
@@ -75,11 +74,6 @@ class backround_breakout_thread_class(object):
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.stocks_set)) as executor:
                 executor.map(self.__run_yahoo_stock, self.stocks_set)
 
-            for msg_to_send in self.whatsapp_msg_queue:
-                send_whatsapp_message('"Stocks alerts"', msg_to_send)
-
-            self.whatsapp_msg_queue.clear()
-
             time.sleep(timer_of_breakout_checking)
 
     def __run_yahoo_stock(self, stock_symbol_and_pivot):
@@ -92,13 +86,14 @@ class backround_breakout_thread_class(object):
         if (stock_symbol in self.breakout_stocks):
             return
 
-        if self.__detect_breakout(yahoo_stock, 1.4, 0.03, pivot,stock_symbol):
+        stock_volume_increase_ratio = self.__detect_breakout(yahoo_stock, 1.4, 0.03, pivot,stock_symbol)
+        if (stock_volume_increase_ratio != False):
 
             self.lock.acquire()
 
             self.breakout_stocks.add(stock_symbol)
-            msg = 'Buy alert for ' + stock_symbol
-            self.whatsapp_msg_queue.append(msg)
+            msg_to_send = 'Buy alert for ' + stock_symbol
+            send_whatsapp_message('"Stocks alerts"', msg_to_send+ ' As volume is bigger by : ' + stock_volume_increase_ratio +'than the avarage')
 
             self.lock.release()
 
@@ -130,8 +125,8 @@ class backround_breakout_thread_class(object):
 
 
     def __detect_breakout(self, stock, volume_threshold, percent_threshold, pivot_point, stock_symbol):
-
-        is_breakout = False
+        return "1.5"
+        msg_to_send_if_breakout = False
         nyc_datetime = datetime.datetime.now(pytz.timezone('US/Eastern'))
         market_open_flag = self.__is_market_open(nyc_datetime)
 
@@ -147,10 +142,10 @@ class backround_breakout_thread_class(object):
 
         if (stock_current_volume >= stock_3m_avg_relative_volume * volume_threshold) and (stock_current_percent_change >= percent_threshold) and (float(pivot_point) <= stock_current_price ):
             print('is_breakout for :'+ stock_symbol)
-            is_breakout = True
+            msg_to_send_if_breakout = str(stock_current_volume / stock_3m_avg_relative_volume * volume_threshold)
         else:
             print ('no breakout so far for :' + stock_symbol)
-        return is_breakout
+        return msg_to_send_if_breakout
 
     def __get_set_of_stocks(self):
 
