@@ -75,8 +75,9 @@ class backround_breakout_thread_class(object):
             try:
 
                 self.breakout_stocks.add(stock_symbol)
-                msg_to_send = 'Buy alert for ' + stock_symbol
-                self.social_media_obj.send_whatsapp_message('"Stocks alerts"', msg_to_send+ ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage')
+                msg_to_send = 'Buy alert for ' + stock_symbol + ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage'
+                self.social_media_obj.send_whatsapp_message('"Stocks alerts"', msg_to_send)
+                self.social_media_obj.send_gmail_message("aradinbar91@gmail.com",msg_to_send)
             except (KeyboardInterrupt):
                 print('secondary thread closed by user')
             finally:
@@ -110,7 +111,7 @@ class backround_breakout_thread_class(object):
 
 
     def __detect_breakout(self, stock, volume_threshold, percent_threshold, pivot_point, stock_symbol):
-
+        return "2"
         msg_to_send_if_breakout = False
         nyc_datetime = datetime.datetime.now(pytz.timezone('US/Eastern'))
         market_open_flag = self.__is_market_open(nyc_datetime)

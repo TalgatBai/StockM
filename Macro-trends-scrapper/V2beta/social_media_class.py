@@ -32,7 +32,7 @@ class social_media_class():
 
             yag = yagmail.SMTP(user='wizardsofthemarket@gmail.com', password=self.password)
             #sending the email
-            yag.send(to=customer_mail, subject='Testing Yagmail', contents=mail_contents)
+            yag.send(to=customer_mail, subject='Buy alert!', contents=mail_contents)
             print("Email sent successfully")
         except:
             print("Error, email was not sent")
