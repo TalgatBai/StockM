@@ -40,24 +40,26 @@ class social_media_class():
 
 
     def send_whatsapp_message(self, group_name, message_to_send):
+        try:
+            options = Options()
+            options.add_argument('--profile-directory=Default')
+            options.add_argument('--user-data-dir=C:/Temp/ChromeProfile')
+            driver = webdriver.Chrome(chrome_options=options)
 
-        options = Options()
-        options.add_argument('--profile-directory=Default')
-        options.add_argument('--user-data-dir=C:/Temp/ChromeProfile')
-        driver = webdriver.Chrome(chrome_options=options)
+            driver.get("https://web.whatsapp.com/")
+            wait = WebDriverWait(driver, 600)
 
-        driver.get("https://web.whatsapp.com/")
-        wait = WebDriverWait(driver, 600)
+            x_arg = '//span[contains(@title,' + group_name + ')]'
+            group_title = wait.until(EC.presence_of_element_located((
+                By.XPATH, x_arg)))
+            print(group_title)
+            print("Wait for few seconds")
+            group_title.click()
+            message = driver.find_elements_by_xpath('//*[@id="main"]/footer/div[1]/div[2]/div/div[2]')[0]
 
-        x_arg = '//span[contains(@title,' + group_name + ')]'
-        group_title = wait.until(EC.presence_of_element_located((
-            By.XPATH, x_arg)))
-        print(group_title)
-        print("Wait for few seconds")
-        group_title.click()
-        message = driver.find_elements_by_xpath('//*[@id="main"]/footer/div[1]/div[2]/div/div[2]')[0]
-
-        message.send_keys(message_to_send)
-        sendbutton = driver.find_elements_by_xpath('//*[@id="main"]/footer/div[1]/div[3]/button')[0]
-        sendbutton.click()
-        driver.close()
+            message.send_keys(message_to_send)
+            sendbutton = driver.find_elements_by_xpath('//*[@id="main"]/footer/div[1]/div[3]/button')[0]
+            sendbutton.click()
+            driver.close()
+        except:
+            print('whatsapp error')
