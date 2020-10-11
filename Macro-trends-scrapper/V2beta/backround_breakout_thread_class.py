@@ -17,6 +17,27 @@ import concurrent.futures
 import os
 from functools import partial
 from collections import deque
+import smtplib, ssl
+
+def send_gmail_message():
+    port = 465  # For SSL
+    password = input("Type your password and press enter: ")
+
+    # Create a secure SSL context
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
+        server.login("akliyaldi@gmail.com", password)
+        sender_email = "akliyaldi@gmail.com"
+        receiver_email = "aradinbar91@gmail.com"
+        message = """\
+        Subject: Hi there
+        
+        This message is sent from Python."""
+
+        # Send email here
+        server.sendmail(sender_email, receiver_email, message)
+
 
 
 
@@ -64,6 +85,7 @@ class backround_breakout_thread_class(object):
         except (KeyboardInterrupt, SystemExit):
             print('program closed by user')
 
+
     def run(self):
 
         timer_of_breakout_checking = 60 * 15
@@ -88,9 +110,9 @@ class backround_breakout_thread_class(object):
 
         stock_volume_increase_ratio = self.__detect_breakout(yahoo_stock, 1.4, 0.03, pivot,stock_symbol)
         if (stock_volume_increase_ratio != False):
-
+            self.lock.acquire()
             try:
-                self.lock.acquire()
+
                 self.breakout_stocks.add(stock_symbol)
                 msg_to_send = 'Buy alert for ' + stock_symbol
                 send_whatsapp_message('"Stocks alerts"', msg_to_send+ ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage')
@@ -168,7 +190,7 @@ class backround_breakout_thread_class(object):
 def main():
 
     backround_onj = backround_breakout_thread_class()
-
+    # send_gmail_message()
 if __name__ == "__main__":
 
 
