@@ -88,14 +88,14 @@ class backround_breakout_thread_class(object):
 
         stock_volume_increase_ratio = self.__detect_breakout(yahoo_stock, 1.4, 0.03, pivot,stock_symbol)
         if (stock_volume_increase_ratio != False):
+            try:
+                self.lock.acquire()
 
-            self.lock.acquire()
-
-            self.breakout_stocks.add(stock_symbol)
-            msg_to_send = 'Buy alert for ' + stock_symbol
-            send_whatsapp_message('"Stocks alerts"', msg_to_send+ ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage')
-
-            self.lock.release()
+                self.breakout_stocks.add(stock_symbol)
+                msg_to_send = 'Buy alert for ' + stock_symbol
+                send_whatsapp_message('"Stocks alerts"', msg_to_send+ ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage')
+            finally:
+                self.lock.release()
 
 
     def __get_relative_time_percentage(self, nyc_datetime):
