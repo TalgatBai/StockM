@@ -25,14 +25,14 @@ class social_media_class():
     def __init__(self,password):
         self.password = password
 
-    def send_gmail_message(self ,customer_mail,mail_contents):
+    def send_gmail_message(self ,customers_mail_array,mail_contents):
     #https://blog.mailtrap.io/yagmail-tutorial/
         try:
             #initializing the server connection
 
             yag = yagmail.SMTP(user='wizardsofthemarket@gmail.com', password=self.password)
             #sending the email
-            yag.send(to=customer_mail, subject='Buy alert!', contents=mail_contents)
+            yag.send(to=customers_mail_array, subject='Buy alert!', contents=mail_contents)
             print("Email sent successfully")
         except:
             print("Error, email was not sent")

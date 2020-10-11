@@ -23,10 +23,6 @@ from social_media_class import social_media_class
 
 
 
-
-
-
-
 class backround_breakout_thread_class(object):
 
     def __init__(self, password):
@@ -77,7 +73,7 @@ class backround_breakout_thread_class(object):
                 self.breakout_stocks.add(stock_symbol)
                 msg_to_send = 'Buy alert for ' + stock_symbol + ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage'
                 self.social_media_obj.send_whatsapp_message('"Stocks alerts"', msg_to_send)
-                self.social_media_obj.send_gmail_message("aradinbar91@gmail.com",msg_to_send)
+                self.social_media_obj.send_gmail_message(["aradinbar91@gmail.com","shaharman5@gmail.com"],msg_to_send)
             except (KeyboardInterrupt):
                 print('secondary thread closed by user')
             finally:
