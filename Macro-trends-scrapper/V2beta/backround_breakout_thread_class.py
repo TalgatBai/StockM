@@ -1,6 +1,5 @@
 import threading
 from concurrent.futures.thread import ThreadPoolExecutor
-
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -18,51 +17,11 @@ import os
 from functools import partial
 from collections import deque
 import smtplib, ssl
-
-def send_gmail_message():
-    port = 465  # For SSL
-    password = input("Type your password and press enter: ")
-
-    # Create a secure SSL context
-    context = ssl.create_default_context()
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
-        server.login("akliyaldi@gmail.com", password)
-        sender_email = "akliyaldi@gmail.com"
-        receiver_email = "aradinbar91@gmail.com"
-        message = """\
-        Subject: Hi there
-        
-        This message is sent from Python."""
-
-        # Send email here
-        server.sendmail(sender_email, receiver_email, message)
+import yagmail
+import getpass
+from social_media_class import social_media_class
 
 
-
-
-def send_whatsapp_message(group_name, message_to_send):
-
-    options = Options()
-    options.add_argument('--profile-directory=Default')
-    options.add_argument('--user-data-dir=C:/Temp/ChromeProfile')
-    driver = webdriver.Chrome(chrome_options=options)
-
-    driver.get("https://web.whatsapp.com/")
-    wait = WebDriverWait(driver, 600)
-
-    x_arg = '//span[contains(@title,' + group_name + ')]'
-    group_title = wait.until(EC.presence_of_element_located((
-        By.XPATH, x_arg)))
-    print(group_title)
-    print("Wait for few seconds")
-    group_title.click()
-    message = driver.find_elements_by_xpath('//*[@id="main"]/footer/div[1]/div[2]/div/div[2]')[0]
-
-    message.send_keys(message_to_send)
-    sendbutton = driver.find_elements_by_xpath('//*[@id="main"]/footer/div[1]/div[3]/button')[0]
-    sendbutton.click()
-    driver.close()
 
 
 
@@ -70,11 +29,13 @@ def send_whatsapp_message(group_name, message_to_send):
 
 class backround_breakout_thread_class(object):
 
-    def __init__(self):
+    def __init__(self, password):
 
         self.stocks_set = self.__get_set_of_stocks()
         self.breakout_stocks = set()
         self.lock = threading.Lock()
+        self.social_media_obj = social_media_class(password)
+
 
         try:
             thread = threading.Thread(target=self.run)
@@ -115,7 +76,7 @@ class backround_breakout_thread_class(object):
 
                 self.breakout_stocks.add(stock_symbol)
                 msg_to_send = 'Buy alert for ' + stock_symbol
-                send_whatsapp_message('"Stocks alerts"', msg_to_send+ ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage')
+                self.social_media_obj.send_whatsapp_message('"Stocks alerts"', msg_to_send+ ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage')
             except (KeyboardInterrupt):
                 print('secondary thread closed by user')
             finally:
@@ -189,8 +150,9 @@ class backround_breakout_thread_class(object):
 
 def main():
 
-    backround_onj = backround_breakout_thread_class()
-    # send_gmail_message()
+    password = getpass.getpass('Password:')
+    backround_onj = backround_breakout_thread_class(password)
+
 if __name__ == "__main__":
 
 
