@@ -71,7 +71,7 @@ class StocksRater:
     income = 'net_income_growth'
     eps = 'eps_growth'
     sales = 'sales_growth'
-    growth_threshold = 50
+    growth_threshold = 35
     delimiters = ['"', '%', ',']
 
     def __init__(self, stocks_info_file, acceleration_stocks_file, growth_stocks_file):
