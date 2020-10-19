@@ -65,7 +65,7 @@ class backround_breakout_thread_class(object):
         if (stock_symbol in self.breakout_stocks):
             return
 
-        stock_volume_increase_ratio = self.__detect_breakout(yahoo_stock, 1.4, 0.023, pivot,stock_symbol)
+        stock_volume_increase_ratio = self.__detect_breakout(yahoo_stock, 1.4, 0, pivot,stock_symbol)
         if (stock_volume_increase_ratio != False):
             self.lock.acquire()
             try:
