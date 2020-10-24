@@ -19,14 +19,6 @@ class MarketStatus(Enum):
     AFTER_MARKET_CLOSED = 'after market closed'
 
 
-class NasdaqComposite:
-    def __init__(self, ma_3, ma_3_change, ma_7, ma_7_change):
-        self.ma_3 = ma_3
-        self.ma_3_change = ma_3_change
-        self.ma_7 = ma_7
-        self.ma_7_change = ma_7_change
-
-
 def check_ma_3_and_ma_7_percentage_changes(ma_3_change, ma_7_change, market_notes):
     if not ma_3_change > 0:
         market_notes.append('MA(3) change <= 0')
