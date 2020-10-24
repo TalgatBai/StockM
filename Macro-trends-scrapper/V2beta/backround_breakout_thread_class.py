@@ -37,22 +37,26 @@ class backround_breakout_thread_class(object):
             thread = threading.Thread(target=self.run)
             thread.daemon = True
             thread.start()
-            while thread.isAlive():
+            while thread.is_alive():
                 thread.join(1)
         except (KeyboardInterrupt, SystemExit):
             print('program closed by user')
 
 
     def run(self):
-
-        timer_of_breakout_checking = 60 * 15
+        minutes_interval = 5
+        timer_of_breakout_checking = 60 * minutes_interval
         pool = ThreadPoolExecutor(max_workers = 10)
 
         while True:
-
+            if not self.__is_market_open(nyc_datetime=datetime.datetime.now(pytz.timezone('US/Eastern'))):
+                print('Market is closed!')
+                sys.exit()
+            print('\nRunning again!')
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.stocks_set)) as executor:
                 executor.map(self.__run_yahoo_stock, self.stocks_set)
 
+            print(f'Waiting {minutes_interval} minutes...')
             time.sleep(timer_of_breakout_checking)
 
     def __run_yahoo_stock(self, stock_symbol_and_pivot):
@@ -91,7 +95,7 @@ class backround_breakout_thread_class(object):
 
     def __is_market_open(self, nyc_datetime):
 
-        if (nyc_datetime.isoweekday() == 6) or (nyc_datetime.isoweekday() == 7):
+        if (nyc_datetime.isoweekday() == 7) or (nyc_datetime.isoweekday() == 0):
             return False
 
         if (nyc_datetime.hour < 9) or (nyc_datetime.hour > 16):

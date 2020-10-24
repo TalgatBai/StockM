@@ -1,14 +1,9 @@
-LIVE, pivot: 11.08
-MELI, pivot: 1303
 SHW, pivot: 720
 CLW, pivot: 42
-FUTU, pivot: 35
-SAM, pivot: 978
 ADI, pivot: 127
 CLGX, pivot: 72
 HOV, pivot: 37.75
 SSD, pivot: 101
-CYBE, pivot: 40
 SNPS, pivot: 230
 AZPN, pivot: 135.8
 GSS, pivot: 5
