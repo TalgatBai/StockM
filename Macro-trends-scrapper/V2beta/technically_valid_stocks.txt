@@ -1,6 +1,6 @@
 HOV, pivot: 37.59
 DHI, pivot: 78.4
-#AMRK, pivot: 36.5
+AMRK, pivot: 36.5
 FUTU, pivot: 34.27
 DOMO, pivot: 41
 BMCH, pivot: 44.65
