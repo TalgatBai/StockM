@@ -36,10 +36,10 @@ breakout_stocks_file = 'breakout_stocks.txt'
 
 
 def is_market_open(nyc_datetime):
-    if (nyc_datetime.hour < 9) or (nyc_datetime.hour > 15):
+    if (nyc_datetime.hour < 8) or (nyc_datetime.hour > 15):
         return False
 
-    if (nyc_datetime.hour == 9) and (nyc_datetime.minute < 30):
+    if (nyc_datetime.hour == 8) and (nyc_datetime.minute < 30):
         return False
 
     if (nyc_datetime.hour == 15) and (nyc_datetime.minute > 0):
