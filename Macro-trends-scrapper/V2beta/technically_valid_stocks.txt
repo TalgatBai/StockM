@@ -5,7 +5,6 @@ FUTU, pivot: 34.27
 DOMO, pivot: 41
 BMCH, pivot: 44.65
 SSD, pivot: 99
-TPB, pivot: 32.57
 SHW, pivot: 714
 GSS, pivot: 4.6
 AZO, pivot: 1207

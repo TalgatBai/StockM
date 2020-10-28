@@ -45,7 +45,7 @@ def write_db():
             f.truncate(0)  # need '0' when using r+
 
     if os.path.exists(failed_stocks_file):
-        with open(db_file, 'r+') as f:
+        with open(failed_stocks_file, 'r+') as f:
             f.truncate(0)  # need '0' when using r+
 
     for stock_symbol in global_stock_dict:
