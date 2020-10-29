@@ -98,13 +98,13 @@ class backround_breakout_thread_class(object):
         if (nyc_datetime.isoweekday() == 7) or (nyc_datetime.isoweekday() == 0):
             return False
 
-        if (nyc_datetime.hour < 8) or (nyc_datetime.hour > 15):
+        if (nyc_datetime.hour < 9) or (nyc_datetime.hour > 16):
             return False
 
-        if (nyc_datetime.hour == 8) and (nyc_datetime.minute < 30):
+        if (nyc_datetime.hour == 9) and (nyc_datetime.minute < 30):
             return False
 
-        if (nyc_datetime.hour == 15) and (nyc_datetime.minute > 0):
+        if (nyc_datetime.hour == 16) and (nyc_datetime.minute > 0):
             return False
 
         return True
