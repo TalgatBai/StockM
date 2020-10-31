@@ -132,8 +132,7 @@ def write_stocks_to_file(stocks_file, heap):
 
 def main():
     stocks_set = set()
-    files = ['acceleration_stocks.txt', 'growth_stocks.txt']
-    for file in files:
+    for file in stocks_info_files_list:
         try:
             with open(file, 'r+') as f:
                 for line in f:

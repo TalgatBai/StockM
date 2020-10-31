@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 import os.path
 import requests
 import re
-from marketwatch_stock_financials_class import marketwatch_stock_financials_class
+from marketwatch_stock_financials_class_withmain import marketwatch_stock_financials_class
 
 # the keys are stock symbols and the values are eps , net-icome and sales growths arrays.
 global_stock_dict = {}
@@ -53,6 +53,11 @@ def write_db():
         eps_growth_array = global_stock_dict[stock_symbol][0]
         net_income_growth_array = global_stock_dict[stock_symbol][1]
         sales_growth_array = global_stock_dict[stock_symbol][2]
+        eps_basic_array = global_stock_dict[stock_symbol][3]
+        shares_outstanding_array = global_stock_dict[stock_symbol][4]
+        net_income_array = global_stock_dict[stock_symbol][5]
+        sales_array = global_stock_dict[stock_symbol][6]
+        net_income_available_to_common_array = global_stock_dict[stock_symbol][7]
 
         if ( not eps_growth_array ) and ( not net_income_growth_array ) and ( not sales_growth_array):
             with open(failed_stocks_file, 'a') as filehandle:
@@ -68,6 +73,16 @@ def write_db():
                 json.dump(eps_growth_array, filehandle)
                 filehandle.write(' sales_growth ')
                 json.dump(sales_growth_array, filehandle)
+                filehandle.write(' eps_basic ')
+                json.dump(eps_basic_array, filehandle)
+                filehandle.write(' basic_shares_outstanding ')
+                json.dump(shares_outstanding_array, filehandle)
+                filehandle.write(' net_income ')
+                json.dump(net_income_array, filehandle)
+                filehandle.write(' sales ')
+                json.dump(sales_array, filehandle)
+                filehandle.write(' net_income_available_to_common ')
+                json.dump(net_income_available_to_common_array, filehandle)
                 filehandle.write('\n')
 
 def fill_global_stock_dict_with_stock(stock_symbol):
@@ -76,6 +91,12 @@ def fill_global_stock_dict_with_stock(stock_symbol):
     global_stock_dict[stock_symbol][0] = stock.get_q_eps_growth_array()
     global_stock_dict[stock_symbol][1] = stock.get_q_net_income_growth_array()
     global_stock_dict[stock_symbol][2] = stock.get_q_sales_growth_array()
+    global_stock_dict[stock_symbol][3] = stock.get_q_eps_basic_array()
+    global_stock_dict[stock_symbol][4] = stock.get_q_basic_shares_outstanding_array()
+    global_stock_dict[stock_symbol][5] = stock.get_q_net_income_array()
+    global_stock_dict[stock_symbol][6] = stock.get_q_sales_array()
+    global_stock_dict[stock_symbol][7] = stock.get_q_net_income_available_to_common_array()
+
 
     
 def iteatre_over_stock_map(stock_map):
@@ -89,7 +110,7 @@ def iteatre_over_stock_map(stock_map):
         try:
             global global_stock_dict
             print(stock_symbol)
-            global_stock_dict[stock_symbol] = [[],[],[]]
+            global_stock_dict[stock_symbol] = [[],[],[],[],[],[],[],[]]
             sem = threading.Semaphore(4)
 
             t1 =  pool.submit(fill_global_stock_dict_with_stock, stock_symbol) 
