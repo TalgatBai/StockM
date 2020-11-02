@@ -9,6 +9,74 @@ dow_index_symbol = '^DJI'
 sp500_index_symbol = '^GSPC'
 nasdaq_composite_symbol = '^IXIC'
 
+class index_info():
+
+    def __init__(self,index_symbol,distribution_dates,success_rate):
+        self.index_symbol = index_symbol
+        self.distribution_dates = distribution_dates
+        self.success_rate = success_rate
+
+    def get_index_symbol(self):
+        return self.index_symbol
+
+    def get_distribution_dates(self):
+        return self.distribution_dates
+
+    def get_success_rate(self):
+        return self.success_rate
+
+
+class index_info_tottal():
+
+    def __init__(self):
+        self.index_info_lst = []
+        self.yahoo_finance_historical_price_data = get_yahoo_finance_historical_price_data()
+
+    def add_index_info_object(self,index_info_obj):
+        self.index_info_lst.append(index_info_obj)
+
+    def add_avg_success_rate(self, avg_success_rate):
+        self.avg_success_rate = avg_success_rate
+
+    def get_avg_success_rate(self):
+        return self.avg_success_rate
+
+    def get_index_info_lst(self):
+        return self.index_info_lst
+
+    def compare_actuall_dips_to_dist_dates(self,index_symbol,distribution_dates,actuall_dips_dates,number_of_days_to_check_for_down,precent_down):
+
+        miss_sum = 0
+        map_of_index = self.yahoo_finance_historical_price_data [index_symbol]
+        keys = list(map_of_index.keys())
+        values = list(map_of_index.values())
+
+        for date_dips in actuall_dips_dates :
+
+            miss = True
+            date_dips_index = keys.index(date_dips)
+            for x in range (0,number_of_days_to_check_for_down):
+
+                if keys[x+date_dips_index] in distribution_dates:
+                    miss = False
+
+            if miss == True :
+                miss_sum = miss_sum +1
+
+        return (miss_sum/len(actuall_dips_dates))
+
+
+    def calculate_miss_precent(self,number_of_days_to_check_for_down,precent_down):
+
+        miss_hit_rate = 0
+        for index_obj in self.index_info_lst:
+
+            distribution_dates = index_obj.get_distribution_dates()
+            actuall_dips_dates = check_for_dips_at_index(self.yahoo_finance_historical_price_data, index_obj.get_index_symbol(), number_of_days_to_check_for_down,precent_down)
+            miss_hit_rate = miss_hit_rate +self.compare_actuall_dips_to_dist_dates(index_obj.get_index_symbol(),distribution_dates,actuall_dips_dates,number_of_days_to_check_for_down,precent_down)
+
+        return 1-(miss_hit_rate / 4)
+
 def is_disturbtion_day(volume_yesterday, volume_today, price_today, price_yesterday,ma_yesterday,ma_today):
 
     is_disturbtion_day = False
@@ -158,14 +226,6 @@ def clean_distribution_list(distribution_dict,map_of_all_index_date_to_price,ind
                 break
 
             if values[x+date_index] >= values[date_index] * 1.05 :
-
-               # debugging
-               # print(str(keys[date_index]) + 'is'+ str(values[date_index]) )
-               # print('because')
-               # print(str( keys[x+date_index] )+ 'is' + str(values[x+date_index]))
-               # print()
-               # print()
-
                 more_than_5_precent_set.add(date_num)
                 break
 
@@ -179,17 +239,28 @@ def get_sucess_rate_per_index(start_date,end_date,map_of_all_index_date_to_price
 
     success_rate_sum = 0
 
+
+    lst_to_return = []
+    all_symbol_dates_dict = {}
+
+    index_info_tottal_obj = index_info_tottal()
+
     for index_symbol in major_index_set:
         print(index_symbol)
         ma_map = get_ma_map(index_symbol, 50)
         distribution_dict = get_distribution_dict(index_symbol, ma_map,start_date,end_date)
         distribution_dict = clean_distribution_list(distribution_dict,map_of_all_index_date_to_price, index_symbol)
         final_dates_lst = sliding_window(number_of_days_of_of_total_distribution,number_of_distribution_date_to_look_for,distribution_dict)
-        print(final_dates_lst)
-        print('for index'+ index_symbol)
-        success_rate_sum = success_rate_sum  + validate_tops(number_of_days_to_check_for_down,precent_down,final_dates_lst,index_symbol,map_of_all_index_date_to_price)
+        all_symbol_dates_dict[index_symbol] = final_dates_lst
+        success_rate = validate_tops(number_of_days_to_check_for_down,precent_down,final_dates_lst,index_symbol,map_of_all_index_date_to_price)
+        success_rate_sum = success_rate_sum  + success_rate
 
-    return (success_rate_sum / 4)
+        index_info_tottal_obj.add_index_info_object(index_info(index_symbol,final_dates_lst,success_rate))
+
+    index_info_tottal_obj.add_avg_success_rate(success_rate_sum / 4)
+
+
+    return (index_info_tottal_obj)
 
 def get_all_lists_combined(major_index_set,number_of_distribution_dates_to_look_for,number_of_days_of_of_total_distribution,start_date,end_date):
 
@@ -205,7 +276,7 @@ def get_all_lists_combined(major_index_set,number_of_distribution_dates_to_look_
 def get_map_of_date_to_price(yahoo_stock,index_symbol):
 
     map_to_price = {}
-    json = (yahoo_stock.get_historical_price_data('2010-01-01', '2020-10-25', 'daily'))
+    json = (yahoo_stock.get_historical_price_data('2009-01-01', '2020-10-25', 'daily'))
 
     for row in json[index_symbol]["prices"]:
         price_today = row['close']
@@ -265,7 +336,7 @@ def validate_tops(time_after_date, precent_down,list_of_all_dist_days,index_symb
         success_rate = ( yes_count /( yes_count+no_count))
     else:
         success_rate = 0
-    print(success_rate)
+
     return success_rate
 
 
@@ -279,28 +350,28 @@ def check_for_dips_at_index(map_of_all_index_date_to_price,index_symbol ,days_un
 
     for x in range(0,len(keys)-days_until_end) :
 
-        for y in range(1,days_until_end):
-            if (float(values[x]*(1-precent_down) ) > float(values[x+y])):
-                set_of_dates_to_retrun.add(keys[x])
-
-    print(sorted(set_of_dates_to_retrun))
+        if (float(values[x]*(1-precent_down) ) > float(values[x+days_until_end])):
+            set_of_dates_to_retrun.add(keys[x])
 
     return sorted(set_of_dates_to_retrun)
 
+
+
+
 def check_the_best_params(start_date,end_date,major_index_set):
 
+    index_info_tottal_obj = index_info_tottal()
     success_rate_dict = {}
     number_of_distribution_dates_to_look_for = 3
-    number_of_days_of_of_total_distribution = 4
-    number_of_days_to_check_for_down = 5
-    precent_down = 0.2
+    number_of_days_to_check_for_down = 20
+    precent_down = 0.035
 
     map_of_all_index_date_to_price = get_yahoo_finance_historical_price_data ()
 
     futures = {}
     while number_of_distribution_dates_to_look_for <= 6 :
         pool = ThreadPoolExecutor(max_workers=100)
-
+        number_of_days_of_of_total_distribution = 5
         while number_of_days_of_of_total_distribution <= 25 :
 
             future =pool.submit(get_sucess_rate_per_index,start_date,end_date, map_of_all_index_date_to_price, major_index_set,number_of_distribution_dates_to_look_for,number_of_days_of_of_total_distribution,number_of_days_to_check_for_down,precent_down)
@@ -308,25 +379,25 @@ def check_the_best_params(start_date,end_date,major_index_set):
             number_of_days_of_of_total_distribution = number_of_days_of_of_total_distribution + 1
 
         for future in futures:
-            sucess_rate = future.result()
-            success_rate_dict[sucess_rate] = [futures[future][0],futures[future][1]]
+            index_info_tottal_obj = future.result()
+            success_rate = index_info_tottal_obj.get_avg_success_rate()
+            hit_avg = index_info_tottal_obj.calculate_miss_precent(number_of_days_to_check_for_down,precent_down)
+            success_rate_dict[round(success_rate,2)] = [futures[future], round(hit_avg,2)]
 
 
-        number_of_days_of_of_total_distribution = 7
         number_of_distribution_dates_to_look_for = number_of_distribution_dates_to_look_for + 1
 
-
     order_sucees_rate_dict = collections.OrderedDict(sorted(success_rate_dict.items()))
-    print(order_sucees_rate_dict)
+
     return order_sucees_rate_dict
 
 def market_top_main():
 
-    number_of_distribution_dates_to_look_for = 6
-    number_of_days_of_of_total_distribution = 18
-    number_of_days_to_check_for_down = 10
-    precent_down = 0.1
-    start_date = '2012-01-01'
+    number_of_distribution_dates_to_look_for = 5
+    number_of_days_of_of_total_distribution = 21
+    number_of_days_to_check_for_down = 20
+    precent_down = 0.035
+    start_date = '2010-01-01'
     end_date = '2020-10-25'
 
     major_index_set = set()
@@ -342,8 +413,7 @@ def market_top_main():
     check_the_best_params(start_date,end_date,major_index_set)
 
     # check for dips in the index
-    print('dips')
-    check_for_dips_at_index(get_yahoo_finance_historical_price_data(),'^DJI' ,number_of_days_to_check_for_down,precent_down)
+    #check_for_dips_at_index(get_yahoo_finance_historical_price_data(),'^DJI' ,number_of_days_to_check_for_down,precent_down)
 
     # combining the whole 4 index to one list than optional sort and remove duplicate
     #list_of_all_dates_from_all_index = get_all_lists_combined(major_index_set,number_of_distribution_dates_to_look_for,number_of_days_of_of_total_distribution)
