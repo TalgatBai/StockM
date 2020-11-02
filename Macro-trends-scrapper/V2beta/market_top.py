@@ -388,7 +388,7 @@ def check_the_best_params(start_date,end_date,major_index_set):
         number_of_distribution_dates_to_look_for = number_of_distribution_dates_to_look_for + 1
 
     order_sucees_rate_dict = collections.OrderedDict(sorted(success_rate_dict.items()))
-
+    print(order_sucees_rate_dict)
     return order_sucees_rate_dict
 
 def market_top_main():
