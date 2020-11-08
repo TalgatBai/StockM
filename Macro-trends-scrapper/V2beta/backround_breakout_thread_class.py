@@ -44,7 +44,7 @@ class backround_breakout_thread_class(object):
 
 
     def run(self):
-        minutes_interval = 5
+        minutes_interval = 15
         timer_of_breakout_checking = 60 * minutes_interval
         pool = ThreadPoolExecutor(max_workers = 10)
 
@@ -77,7 +77,7 @@ class backround_breakout_thread_class(object):
                 self.breakout_stocks.add(stock_symbol)
                 msg_to_send = 'Buy alert for ' + stock_symbol + ' As volume is bigger by : ' + stock_volume_increase_ratio +' than the avarage'
                 self.social_media_obj.send_whatsapp_message('"Stocks alerts"', msg_to_send)
-                self.social_media_obj.send_gmail_message(["aradinbar91@gmail.com","shaharman5@gmail.com"],msg_to_send)
+                self.social_media_obj.send_gmail_message(["aradinbar91@gmail.com","shaharman5@gmail.com","tkhtur1@gmail.com"],msg_to_send)
             except (KeyboardInterrupt):
                 print('secondary thread closed by user')
             finally:

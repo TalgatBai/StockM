@@ -114,5 +114,4 @@ def multi_process_main():
 
 
 if __name__ == "__main__":
-    # main()
     multi_process_main()
